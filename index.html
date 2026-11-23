@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f7fd">
+  <meta name="description" content="Weave-VLA grounds robot manipulation in a compact 3D graph of objects and their relationships. Explore the method, benchmarks, and real-robot demonstrations.">
+  <meta property="og:title" content="Weave-VLA · 3D Relational Grounding for Vision-Language-Action Models">
+  <meta property="og:description" content="Benchmark results and real-robot demonstrations from Weave-VLA.">
+  <meta property="og:type" content="website">
+  <title>Weave-VLA · 3D Relational Grounding for Vision-Language-Action Models</title>
+  <link rel="icon" href="assets/mark.png?v=5" type="image/png" sizes="384x384">
+  <link rel="preload" href="assets/fonts/space-grotesk.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="site.css?v=6">
+  <script src="site.js?v=3" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="#overview"><img class="mark" src="assets/mark.png?v=5" alt="" width="36" height="36"><span>Weave<span class="brand-accent">-VLA</span></span></a>
+      <nav class="main-nav" aria-label="Page sections">
+        <a href="#overview" aria-current="location">Overview</a>
+        <a href="#method">Method</a>
+        <a href="#results">Results</a>
+        <a href="#demos">Demos</a>
+        <a href="#citation">Citation</a>
+      </nav>
+    </div>
+  </header>
+  <main id="main">
+    <section class="hero" id="overview" aria-labelledby="project-title">
+      <div class="wrap">
+        <div class="hero-stack">
+          <div class="hero-copy">
+            <h1 id="project-title">Weave<span>-VLA</span></h1>
+            <p class="paper-title">3D Relational Grounding for Vision-Language-Action Models</p>
+            <ul class="authors" aria-label="Authors">
+              <li>Zien Wang<sup>1,*</sup></li><li>Yuhao Pan<sup>1,*</sup></li><li>Yunfeng Fan<sup>2</sup></li>
+              <li>Nan Cheng<sup>3</sup></li><li>Xin Xia<sup>4</sup></li><li>Wenchao Xu<sup>1,†</sup></li>
+            </ul>
+            <p class="affiliations"><sup>1</sup> The Hong Kong University of Science and Technology<br>
+              <sup>2</sup> Hong Kong Polytechnic University · <sup>3</sup> Xi’an University of Electronic Science and Technology · <sup>4</sup> Zhejiang University</p>
+            <p class="author-notes">* Equal contribution · † Corresponding author</p>
+            <div class="hero-actions" role="group" aria-label="Project resources">
+              <a class="button button-outline" id="paper-link" role="link" aria-disabled="true">Paper</a>
+              <a class="button button-outline" id="code-link" role="link" aria-disabled="true">Code</a>
+              <a class="button button-outline" id="model-link" role="link" aria-disabled="true">Model</a>
+              <a class="button button-outline" id="dataset-link" role="link" aria-disabled="true">Dataset</a>
+            </div>
+          </div>
+          <div class="intro-video" id="intro-video">
+            <video controls playsinline preload="metadata" width="1920" height="1080" poster="assets/intro/weave-vla-promo.webp" aria-label="Weave-VLA project introduction video">
+              <source src="assets/intro/weave-vla-promo.mp4" type="video/mp4">
+              <a href="assets/intro/weave-vla-promo.mp4">Download the Weave-VLA introduction video</a>
+            </video>
+          </div>
+        </div>
+        <dl class="metrics">
+          <div><dt>LIBERO average</dt><dd>98.3<span>%</span></dd><dd class="metric-note">StarVLA-GR00T + Weave-VLA</dd></div>
+          <div><dt>LIBERO-Plus success</dt><dd>87.8<span>%</span></dd><dd class="metric-note">π<sub>0.5</sub> + Weave-VLA</dd></div>
+          <div><dt>CALVIN D→D</dt><dd>3.997<span> / 5</span></dd><dd class="metric-note">Mean subtasks · π<sub>0.5</sub> + Weave-VLA</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="section wrap abstract" id="abstract" aria-labelledby="abstract-title">
+      <div>
+        <p class="eyebrow">ABSTRACT</p>
+        <h2 id="abstract-title">Grounding actions in 3D relationships</h2>
+      </div>
+      <div class="prose">
+        <p>Robot manipulation depends on spatial relationships among objects. A policy needs to know which object to move, where it should go, and how those positions relate in three dimensions.</p>
+        <p>Weave-VLA builds a task-conditioned 3D scene graph from visual observations and the language instruction. It encodes objects and their relationships into a compact set of graph tokens and integrates them into a vision-language-action policy. Experiments on LIBERO, LIBERO-Plus, CALVIN, and a physical robot evaluate how this representation affects task success and robustness.</p>
+      </div>
+    </section>
+
+    <section class="section section-tinted" id="method" aria-labelledby="method-title">
+      <div class="wrap">
+        <div class="section-intro">
+          <p class="eyebrow">METHOD</p>
+          <h2 id="method-title">From observations to action</h2>
+          <p>Weave-VLA adds an explicit representation of objects and their spatial relations to the policy’s visual and language context.</p>
+        </div>
+        <figure class="paper-figure">
+          <a href="assets/figures/architecture.webp" target="_blank" rel="noopener" aria-label="Open the full-resolution Weave-VLA architecture diagram">
+            <img src="assets/figures/architecture.webp" alt="Weave-VLA architecture showing 3D scene graph construction, graph tokenization, and integration into a VLA policy" width="1621" height="593" loading="lazy">
+          </a>
+          <figcaption>Weave-VLA architecture. A task-conditioned object graph is encoded as relational tokens for action prediction. The diagram shows the StarVLA-GR00T integration.</figcaption>
+        </figure>
+        <ol class="method-steps" role="list" aria-label="Weave-VLA method steps">
+          <li>
+            <span class="method-icon"><img src="assets/method/scene-graph.svg?v=2" alt="" width="64" height="48" loading="lazy"></span>
+            <h3>Build the scene graph</h3>
+            <p>Build a 3D graph of task objects, the gripper, and nearby reference objects.</p>
+          </li>
+          <li>
+            <span class="method-icon"><img src="assets/method/relational-tokens.svg?v=2" alt="" width="64" height="48" loading="lazy"></span>
+            <h3>Encode relationships</h3>
+            <p>Update each selected object pair’s recurrent edge state with valid 3D observations, then summarize the graph into compact relational tokens.</p>
+          </li>
+          <li>
+            <span class="method-icon"><img src="assets/method/action-policy.svg?v=2" alt="" width="64" height="48" loading="lazy"></span>
+            <h3>Condition the policy</h3>
+            <p>Combine graph tokens with the visual and language context so the VLA backbone can use explicit spatial structure when predicting actions.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="section wrap" id="results" aria-labelledby="results-title">
+      <div class="section-intro">
+        <p class="eyebrow">SIMULATION BENCHMARKS</p>
+        <h2 id="results-title">Simulation results</h2>
+        <p>Full results on LIBERO, LIBERO-Plus, and CALVIN, including published comparisons and ablations.</p>
+      </div>
+      <div class="benchmark">
+        <div class="segmented benchmark-controls" role="tablist" aria-label="Simulation results" hidden>
+          <button type="button" role="tab" id="tab-libero" aria-controls="benchmark-libero" aria-selected="true">LIBERO</button>
+          <button type="button" role="tab" id="tab-plus" aria-controls="benchmark-plus" aria-selected="false">LIBERO-Plus</button>
+          <button type="button" role="tab" id="tab-calvin" aria-controls="benchmark-calvin" aria-selected="false">CALVIN</button>
+          <button type="button" role="tab" id="tab-ablations" aria-controls="benchmark-ablations" aria-selected="false">Ablations</button>
+        </div>
+        <section class="benchmark-panel" id="benchmark-libero" aria-labelledby="benchmark-libero-heading">
+          <h3 id="benchmark-libero-heading">LIBERO</h3>
+          <p class="benchmark-summary" id="benchmark-libero-summary">Success rates (%) across four suites, with 500 rollouts per suite. Long denotes LIBERO-10. Average is the four-suite mean.</p>
+          <p class="table-scroll-hint">Scroll horizontally to see all columns.</p>
+          <div class="table-scroll" role="region" aria-label="LIBERO results table" tabindex="0">
+            <table class="results-table" aria-describedby="benchmark-libero-summary benchmark-libero-note">
+              <caption class="sr-only">LIBERO results</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Method</th>
+                  <th scope="col">Spatial</th>
+                  <th scope="col">Object</th>
+                  <th scope="col">Goal</th>
+                  <th scope="col">Long</th>
+                  <th scope="col">Average</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">OpenVLA <span class="result-source">(Kim et al., 2024)</span></th>
+                  <td>84.7</td>
+                  <td>88.4</td>
+                  <td>79.2</td>
+                  <td>53.7</td>
+                  <td>76.5</td>
+                </tr>
+                <tr>
+                  <th scope="row">OpenVLA-OFT <span class="result-source">(Kim et al., 2025)</span></th>
+                  <td>97.6</td>
+                  <td>98.4</td>
+                  <td>97.9</td>
+                  <td>94.5</td>
+                  <td>97.1</td>
+                </tr>
+                <tr>
+                  <th scope="row">π<sub>0</sub> <span class="result-source">(Black et al., 2025b)</span></th>
+                  <td>96.8</td>
+                  <td>98.8</td>
+                  <td>95.8</td>
+                  <td>85.2</td>
+                  <td>94.2</td>
+                </tr>
+                <tr>
+                  <th scope="row">DreamVLA <span class="result-source">(Zhang et al., 2025)</span></th>
+                  <td>97.5</td>
+                  <td>94.0</td>
+                  <td>89.5</td>
+                  <td>89.5</td>
+                  <td>92.6</td>
+                </tr>
+                <tr>
+                  <th scope="row">GR00T-N1 <span class="result-source">(Bjorck et al., 2025)</span></th>
+                  <td>94.4</td>
+                  <td>97.6</td>
+                  <td>93.0</td>
+                  <td>90.6</td>
+                  <td>93.9</td>
+                </tr>
+                <tr>
+                  <th scope="row">MemoryVLA <span class="result-source">(Shi et al., 2026)</span></th>
+                  <td>98.4</td>
+                  <td>98.4</td>
+                  <td>96.4</td>
+                  <td>93.4</td>
+                  <td>96.7</td>
+                </tr>
+                <tr>
+                  <th scope="row">VLA-JEPA <span class="result-source">(Sun et al., 2026)</span></th>
+                  <td>96.2</td>
+                  <td><strong class="result-best">99.6</strong></td>
+                  <td>97.2</td>
+                  <td>95.8</td>
+                  <td>97.2</td>
+                </tr>
+                <tr>
+                  <th scope="row">DeepThinkVLA <span class="result-source">(Yin et al., 2025)</span></th>
+                  <td>96.6</td>
+                  <td>99.0</td>
+                  <td>96.4</td>
+                  <td><span class="result-runner-up">96.2</span></td>
+                  <td>97.0</td>
+                </tr>
+                <tr>
+                  <th scope="row">StarVLA-GR00T <span class="result-source">(Community, 2026)</span></th>
+                  <td>97.8</td>
+                  <td>98.8</td>
+                  <td>97.4</td>
+                  <td>92.0</td>
+                  <td>96.5</td>
+                </tr>
+                <tr>
+                  <th scope="row">π<sub>0.5</sub> <span class="result-source">(Black et al., 2025a)</span></th>
+                  <td><span class="result-runner-up">98.8</span></td>
+                  <td>98.2</td>
+                  <td>98.0</td>
+                  <td>92.4</td>
+                  <td>96.9</td>
+                </tr>
+                <tr class="result-ours">
+                  <th scope="row">Weave-VLA (StarVLA)</th>
+                  <td><span class="result-runner-up">98.8</span> <span class="result-delta positive">(+1.0)</span></td>
+                  <td><strong class="result-best">99.6</strong> <span class="result-delta positive">(+0.8)</span></td>
+                  <td><strong class="result-best">98.8</strong> <span class="result-delta positive">(+1.4)</span></td>
+                  <td>96.0 <span class="result-delta positive">(+4.0)</span></td>
+                  <td><strong class="result-best">98.3</strong> <span class="result-delta positive">(+1.8)</span></td>
+                </tr>
+                <tr class="result-ours">
+                  <th scope="row">Weave-VLA (π<sub>0.5</sub>)</th>
+                  <td><strong class="result-best">99.0</strong> <span class="result-delta positive">(+0.2)</span></td>
+                  <td><span class="result-runner-up">99.2</span> <span class="result-delta positive">(+1.0)</span></td>
+                  <td><span class="result-runner-up">98.2</span> <span class="result-delta positive">(+0.2)</span></td>
+                  <td><strong class="result-best">96.4</strong> <span class="result-delta positive">(+4.0)</span></td>
+                  <td><span class="result-runner-up">98.2</span> <span class="result-delta positive">(+1.3)</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="benchmark-note" id="benchmark-libero-note">Parenthesized values show percentage-point gains over the corresponding backbone.</p>
+        </section>
+
+        <section class="benchmark-panel" id="benchmark-plus" aria-labelledby="benchmark-plus-heading">
+          <h3 id="benchmark-plus-heading">LIBERO-Plus</h3>
+          <p class="benchmark-summary" id="benchmark-plus-summary">Zero-shot success rates (%) across seven perturbation categories using LIBERO-trained models. Overall pools all 10,030 tasks.</p>
+          <p class="table-scroll-hint">Scroll horizontally to see all columns.</p>
+          <div class="table-scroll" role="region" aria-label="LIBERO-Plus results table" tabindex="0">
+            <table class="results-table" aria-describedby="benchmark-plus-summary benchmark-plus-note">
+              <caption class="sr-only">LIBERO-Plus results</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Method</th>
+                  <th scope="col">Camera</th>
+                  <th scope="col">Robot</th>
+                  <th scope="col">Language</th>
+                  <th scope="col">Light</th>
+                  <th scope="col">Background</th>
+                  <th scope="col">Noise</th>
+                  <th scope="col">Layout</th>
+                  <th scope="col">Overall</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Fast-WAM <span class="result-source">(Yuan et al., 2026)</span></th>
+                  <td>16.4</td>
+                  <td>44.5</td>
+                  <td>68.9</td>
+                  <td>78.2</td>
+                  <td>53.7</td>
+                  <td>37.7</td>
+                  <td>60.7</td>
+                  <td>51.5</td>
+                </tr>
+                <tr>
+                  <th scope="row">π<sub>0</sub> <span class="result-source">(Black et al., 2025b)</span></th>
+                  <td>13.8</td>
+                  <td>6.0</td>
+                  <td>58.8</td>
+                  <td>85.0</td>
+                  <td>81.4</td>
+                  <td>79.0</td>
+                  <td>68.9</td>
+                  <td>53.6</td>
+                </tr>
+                <tr>
+                  <th scope="row">VLA-JEPA <span class="result-source">(Sun et al., 2026)</span></th>
+                  <td>63.3</td>
+                  <td>67.1</td>
+                  <td>85.4</td>
+                  <td>95.6</td>
+                  <td>93.6</td>
+                  <td>66.3</td>
+                  <td>85.1</td>
+                  <td>79.5</td>
+                </tr>
+                <tr>
+                  <th scope="row">OpenVLA-OFT <span class="result-source">(Kim et al., 2025)</span></th>
+                  <td>56.4</td>
+                  <td>31.9</td>
+                  <td>79.5</td>
+                  <td>88.7</td>
+                  <td>93.3</td>
+                  <td>75.8</td>
+                  <td>74.2</td>
+                  <td>69.6</td>
+                </tr>
+                <tr>
+                  <th scope="row">Being-H0.7 <span class="result-source">(Luo et al., 2026)</span></th>
+                  <td><strong class="result-best">82.0</strong></td>
+                  <td>59.0</td>
+                  <td>82.8</td>
+                  <td>97.8</td>
+                  <td>90.0</td>
+                  <td><span class="result-runner-up">93.5</span></td>
+                  <td><strong class="result-best">88.5</strong></td>
+                  <td>82.1</td>
+                </tr>
+                <tr>
+                  <th scope="row">Cosmos-Policy <span class="result-source">(Kim et al., 2026)</span></th>
+                  <td>75.8</td>
+                  <td>63.3</td>
+                  <td>81.7</td>
+                  <td>96.5</td>
+                  <td>88.9</td>
+                  <td>92.7</td>
+                  <td>82.2</td>
+                  <td>82.2</td>
+                </tr>
+                <tr>
+                  <th scope="row">ImageWAM <span class="result-source">(Zhang et al., 2026)</span></th>
+                  <td><span class="result-runner-up">80.8</span></td>
+                  <td>50.3</td>
+                  <td><span class="result-runner-up">91.4</span></td>
+                  <td><strong class="result-best">98.1</strong></td>
+                  <td>85.5</td>
+                  <td><strong class="result-best">93.8</strong></td>
+                  <td>80.5</td>
+                  <td>83.1</td>
+                </tr>
+                <tr>
+                  <th scope="row">ABot-M0.5 <span class="result-source">(Chen et al., 2026)</span></th>
+                  <td>70.5</td>
+                  <td><strong class="result-best">87.4</strong></td>
+                  <td>88.6</td>
+                  <td>94.0</td>
+                  <td>89.7</td>
+                  <td>75.5</td>
+                  <td>85.2</td>
+                  <td>83.4</td>
+                </tr>
+                <tr>
+                  <th scope="row">StarVLA-GR00T <span class="result-source">(Community, 2026)</span></th>
+                  <td>49.2</td>
+                  <td>62.3</td>
+                  <td>84.3</td>
+                  <td>93.2</td>
+                  <td>92.7</td>
+                  <td>74.2</td>
+                  <td>79.5</td>
+                  <td>74.9</td>
+                </tr>
+                <tr>
+                  <th scope="row">π<sub>0.5</sub> <span class="result-source">(Black et al., 2025a)</span></th>
+                  <td>75.4</td>
+                  <td>77.5</td>
+                  <td>85.6</td>
+                  <td>96.9</td>
+                  <td>94.6</td>
+                  <td>89.7</td>
+                  <td>85.7</td>
+                  <td><span class="result-runner-up">85.7</span></td>
+                </tr>
+                <tr class="result-ours">
+                  <th scope="row">Weave-VLA (StarVLA)</th>
+                  <td>64.6 <span class="result-delta positive">(+15.4)</span></td>
+                  <td>69.2 <span class="result-delta positive">(+6.9)</span></td>
+                  <td><strong class="result-best">93.2</strong> <span class="result-delta positive">(+8.9)</span></td>
+                  <td>94.8 <span class="result-delta positive">(+1.6)</span></td>
+                  <td><span class="result-runner-up">95.3</span> <span class="result-delta positive">(+2.6)</span></td>
+                  <td>83.6 <span class="result-delta positive">(+9.4)</span></td>
+                  <td>81.2 <span class="result-delta positive">(+1.7)</span></td>
+                  <td>82.0 <span class="result-delta positive">(+7.1)</span></td>
+                </tr>
+                <tr class="result-ours">
+                  <th scope="row">Weave-VLA (π<sub>0.5</sub>)</th>
+                  <td>79.5 <span class="result-delta positive">(+4.1)</span></td>
+                  <td><span class="result-runner-up">85.7</span> <span class="result-delta positive">(+8.2)</span></td>
+                  <td>83.1 <span class="result-delta negative">(−2.5)</span></td>
+                  <td><span class="result-runner-up">97.9</span> <span class="result-delta positive">(+1.0)</span></td>
+                  <td><strong class="result-best">97.4</strong> <span class="result-delta positive">(+2.8)</span></td>
+                  <td>89.3 <span class="result-delta negative">(−0.4)</span></td>
+                  <td><span class="result-runner-up">87.7</span> <span class="result-delta positive">(+2.0)</span></td>
+                  <td><strong class="result-best">87.8</strong> <span class="result-delta positive">(+2.1)</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="benchmark-note" id="benchmark-plus-note">The StarVLA-GR00T results are reproduced by the authors. Parenthesized values show percentage-point changes relative to the corresponding backbone.</p>
+        </section>
+
+        <section class="benchmark-panel" id="benchmark-calvin" aria-labelledby="benchmark-calvin-heading">
+          <h3 id="benchmark-calvin-heading">CALVIN D→D</h3>
+          <p class="benchmark-summary" id="benchmark-calvin-summary">Evaluation on 1,000 five-instruction sequences. Columns 1–5 give the success rate (%) for completing at least that many consecutive subtasks. Average length counts completed subtasks.</p>
+          <p class="table-scroll-hint">Scroll horizontally to see all columns.</p>
+          <div class="table-scroll" role="region" aria-label="CALVIN D→D results table" tabindex="0">
+            <table class="results-table" aria-describedby="benchmark-calvin-summary benchmark-calvin-note">
+              <caption class="sr-only">CALVIN D→D results</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Method</th>
+                  <th scope="col">1</th>
+                  <th scope="col">2</th>
+                  <th scope="col">3</th>
+                  <th scope="col">4</th>
+                  <th scope="col">5</th>
+                  <th scope="col">Average length</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">RoboFlamingo <span class="result-source">(Li et al., 2024)</span></th>
+                  <td>86.0</td>
+                  <td>71.4</td>
+                  <td>58.5</td>
+                  <td>46.0</td>
+                  <td>34.9</td>
+                  <td>2.968</td>
+                </tr>
+                <tr>
+                  <th scope="row">MDT-V <span class="result-source">(Reuss et al., 2024)</span></th>
+                  <td><span class="result-runner-up">93.9</span></td>
+                  <td>83.8</td>
+                  <td>73.5</td>
+                  <td>63.9</td>
+                  <td>54.9</td>
+                  <td>3.700</td>
+                </tr>
+                <tr>
+                  <th scope="row">RoboUniView <span class="result-source">(Liu et al., 2024)</span></th>
+                  <td><strong class="result-best">96.2</strong></td>
+                  <td><strong class="result-best">88.8</strong></td>
+                  <td>77.6</td>
+                  <td>66.6</td>
+                  <td>56.3</td>
+                  <td>3.855</td>
+                </tr>
+                <tr>
+                  <th scope="row">StarVLA-GR00T <span class="result-source">(Community, 2026)</span></th>
+                  <td>89.8</td>
+                  <td>79.9</td>
+                  <td>71.8</td>
+                  <td>64.9</td>
+                  <td>58.1</td>
+                  <td>3.645</td>
+                </tr>
+                <tr>
+                  <th scope="row">π<sub>0.5</sub> <span class="result-source">(Black et al., 2025a)</span></th>
+                  <td>92.5</td>
+                  <td>84.0</td>
+                  <td>76.6</td>
+                  <td>71.0</td>
+                  <td>64.4</td>
+                  <td>3.885</td>
+                </tr>
+                <tr class="result-ours">
+                  <th scope="row">Weave-VLA (StarVLA)</th>
+                  <td>92.6 <span class="result-delta positive">(+2.8)</span></td>
+                  <td><span class="result-runner-up">84.4</span> <span class="result-delta positive">(+4.5)</span></td>
+                  <td><span class="result-runner-up">77.9</span> <span class="result-delta positive">(+6.1)</span></td>
+                  <td><span class="result-runner-up">71.4</span> <span class="result-delta positive">(+6.5)</span></td>
+                  <td><span class="result-runner-up">64.7</span> <span class="result-delta positive">(+6.6)</span></td>
+                  <td><span class="result-runner-up">3.910</span> <span class="result-delta positive">(+0.265)</span></td>
+                </tr>
+                <tr class="result-ours">
+                  <th scope="row">Weave-VLA (π<sub>0.5</sub>)</th>
+                  <td>92.7 <span class="result-delta positive">(+0.2)</span></td>
+                  <td><span class="result-runner-up">84.4</span> <span class="result-delta positive">(+0.4)</span></td>
+                  <td><strong class="result-best">78.9</strong> <span class="result-delta positive">(+2.3)</span></td>
+                  <td><strong class="result-best">74.5</strong> <span class="result-delta positive">(+3.5)</span></td>
+                  <td><strong class="result-best">69.2</strong> <span class="result-delta positive">(+4.8)</span></td>
+                  <td><strong class="result-best">3.997</strong> <span class="result-delta positive">(+0.112)</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="benchmark-note" id="benchmark-calvin-note">Parenthesized values show changes relative to the corresponding backbone, in percentage points for success rates and in subtasks for average length.</p>
+        </section>
+
+        <section class="benchmark-panel" id="benchmark-ablations" aria-labelledby="benchmark-ablations-heading">
+          <h3 id="benchmark-ablations-heading">Ablations</h3>
+          <p class="benchmark-summary" id="benchmark-ablations-summary">Weave-VLA (StarVLA) ablations on LIBERO and LIBERO-Plus. All values are success rates (%).</p>
+          <p class="table-scroll-hint">Scroll horizontally to see all columns.</p>
+          <div class="table-scroll" role="region" aria-label="Ablations results table" tabindex="0">
+            <table class="results-table" aria-describedby="benchmark-ablations-summary benchmark-ablations-note">
+              <caption class="sr-only">Ablations results</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Variant</th>
+                  <th scope="col">Spatial</th>
+                  <th scope="col">Object</th>
+                  <th scope="col">Goal</th>
+                  <th scope="col">Long</th>
+                  <th scope="col">Average</th>
+                  <th scope="col">Plus</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">StarVLA</th>
+                  <td>97.8</td>
+                  <td>98.8</td>
+                  <td>97.4</td>
+                  <td>92.0</td>
+                  <td>96.5</td>
+                  <td>74.9</td>
+                </tr>
+                <tr class="result-ours">
+                  <th scope="row">Weave-VLA (Full)</th>
+                  <td>98.8</td>
+                  <td>99.6</td>
+                  <td>98.8</td>
+                  <td>96.0</td>
+                  <td><strong class="result-best">98.3</strong></td>
+                  <td><strong class="result-best">82.0</strong></td>
+                </tr>
+                <tr>
+                  <th scope="row">Without geometry loss (ℒ<sub>geo</sub>)</th>
+                  <td>98.6</td>
+                  <td>99.8</td>
+                  <td>98.4</td>
+                  <td>94.0</td>
+                  <td>97.7</td>
+                  <td>80.4</td>
+                </tr>
+                <tr>
+                  <th scope="row">Without edge memory</th>
+                  <td>98.4</td>
+                  <td>98.6</td>
+                  <td>98.4</td>
+                  <td>95.6</td>
+                  <td>97.8</td>
+                  <td>80.7</td>
+                </tr>
+                <tr>
+                  <th scope="row">With full connectivity</th>
+                  <td>98.6</td>
+                  <td>99.0</td>
+                  <td>96.4</td>
+                  <td>95.8</td>
+                  <td>97.5</td>
+                  <td>79.8</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="benchmark-note" id="benchmark-ablations-note">Average is the mean across the four LIBERO suites. Plus is the pooled LIBERO-Plus success rate.</p>
+        </section>
+      </div>
+    </section>
+
+    <section class="section robotics" id="demos" aria-labelledby="demos-title">
+      <div class="wrap">
+        <div class="section-intro">
+          <p class="eyebrow">REAL-WORLD DEMOS</p>
+          <h2 id="demos-title">Three tasks, four conditions</h2>
+          <p>Watch the robot clean a table, place pens in cups, and stack bowls under the standard setup and three visual perturbations.</p>
+        </div>
+        <div class="video-controls">
+          <p id="condition-label">Recording condition</p>
+          <div class="segmented condition-controls" role="group" aria-labelledby="condition-label">
+            <button type="button" aria-pressed="true" data-condition="normal">Normal</button>
+            <button type="button" aria-pressed="false" data-condition="background">Background</button>
+            <button type="button" aria-pressed="false" data-condition="light">Lighting</button>
+            <button type="button" aria-pressed="false" data-condition="object">Table clutter</button>
+          </div>
+        </div>
+        <p class="sr-only" id="condition-status" role="status"></p>
+        <div class="video-grid">
+          <article class="video-card" data-task="clean_table">
+            <video aria-label="Clean table, normal condition" controls muted playsinline preload="none" poster="assets/rollouts/normal/clean_table.webp?v=2" src="assets/rollouts/normal/clean_table.mp4?v=2">Your browser does not support embedded video.</video>
+            <div class="video-card-caption"><h3>Clean table</h3><span data-current-condition>Normal</span></div>
+          </article>
+          <article class="video-card" data-task="place_pens">
+            <video aria-label="Place pens in cups, normal condition" controls muted playsinline preload="none" poster="assets/rollouts/normal/place_pens.webp?v=2" src="assets/rollouts/normal/place_pens.mp4?v=2">Your browser does not support embedded video.</video>
+            <div class="video-card-caption"><h3>Place pens in cups</h3><span data-current-condition>Normal</span></div>
+          </article>
+          <article class="video-card" data-task="stack_bowls">
+            <video aria-label="Stack bowls, normal condition" controls muted playsinline preload="none" poster="assets/rollouts/normal/stack_bowls.webp?v=2" src="assets/rollouts/normal/stack_bowls.mp4?v=2">Your browser does not support embedded video.</video>
+            <div class="video-card-caption"><h3>Stack bowls</h3><span data-current-condition>Normal</span></div>
+          </article>
+        </div>
+        <details class="setup-details">
+          <summary>View the robot setup and task sequences</summary>
+          <div class="setup-content">
+            <div class="setup-layout">
+              <section class="setup-card" aria-labelledby="workspace-title">
+                <h3 id="workspace-title">Robot workspace</h3>
+                <a class="setup-photo" href="assets/figures/robot-setup.webp" target="_blank" rel="noopener" aria-label="Open the full-size robot workspace photo">
+                  <img src="assets/figures/robot-setup.webp" alt="Robot workspace with labels for the third-person, main, left wrist, and right wrist cameras." width="1024" height="768" loading="lazy" decoding="async">
+                </a>
+              </section>
+              <section class="setup-card" aria-labelledby="cameras-title">
+                <h3 id="cameras-title">Synchronized camera views</h3>
+                <div class="setup-camera-grid">
+                  <figure>
+                    <img src="assets/figures/camera-third-person.webp" alt="External view of the robot and the bowls on the table." width="640" height="480" loading="lazy" decoding="async">
+                    <figcaption>Third-person</figcaption>
+                  </figure>
+                  <figure>
+                    <img src="assets/figures/camera-main.webp" alt="Overhead view of the bowls and plate." width="640" height="480" loading="lazy" decoding="async">
+                    <figcaption>Main</figcaption>
+                  </figure>
+                  <figure>
+                    <img src="assets/figures/camera-left-wrist.webp" alt="The bowls and tabletop from the left gripper." width="640" height="480" loading="lazy" decoding="async">
+                    <figcaption>Left wrist</figcaption>
+                  </figure>
+                  <figure>
+                    <img src="assets/figures/camera-right-wrist.webp" alt="The bowls and tabletop from the right gripper." width="640" height="480" loading="lazy" decoding="async">
+                    <figcaption>Right wrist</figcaption>
+                  </figure>
+                </div>
+              </section>
+            </div>
+            <section class="setup-sequences" aria-labelledby="sequences-title">
+              <h3 id="sequences-title">Task sequences</h3>
+              <section class="setup-card setup-sequence" aria-labelledby="sequence-stack-bowls">
+                <h4 id="sequence-stack-bowls">Stack the bowls on the plate</h4>
+                <ol class="setup-step-grid" role="list">
+                  <li><figure>
+                    <img src="assets/figures/stack-bowls-01.webp" alt="The two grippers approach the bowls." width="1280" height="720" loading="lazy" decoding="async">
+                    <figcaption>Grasp bowls</figcaption>
+                  </figure></li>
+                  <li><figure>
+                    <img src="assets/figures/stack-bowls-02.webp" alt="The robot lifts both bowls above the table." width="1280" height="720" loading="lazy" decoding="async">
+                    <figcaption>Lift bowls</figcaption>
+                  </figure></li>
+                  <li><figure>
+                    <img src="assets/figures/stack-bowls-03.webp" alt="One gripper lowers the first bowl onto the plate." width="1280" height="720" loading="lazy" decoding="async">
+                    <figcaption>Place first bowl</figcaption>
+                  </figure></li>
+                  <li><figure>
+                    <img src="assets/figures/stack-bowls-04.webp" alt="The other gripper stacks the second bowl on the first." width="1280" height="720" loading="lazy" decoding="async">
+                    <figcaption>Place second bowl</figcaption>
+                  </figure></li>
+                </ol>
+              </section>
+              <section class="setup-card setup-sequence" aria-labelledby="sequence-place-pens">
+                <h4 id="sequence-place-pens">Place the pens in the cups</h4>
+                <ol class="setup-step-grid" role="list">
+                  <li><figure>
+                    <img src="assets/figures/place-pens-01.webp" alt="A gripper reaches toward the first pen." width="1280" height="720" loading="lazy" decoding="async">
+                    <figcaption>Pick first pen</figcaption>
+                  </figure></li>
+                  <li><figure>
+                    <img src="assets/figures/place-pens-02.webp" alt="The robot moves the first pen over its cup." width="1280" height="720" loading="lazy" decoding="async">
+                    <figcaption>Place first pen</figcaption>
+                  </figure></li>
+                  <li><figure>
+                    <img src="assets/figures/place-pens-03.webp" alt="A gripper reaches toward the second pen." width="1280" height="720" loading="lazy" decoding="async">
+                    <figcaption>Pick second pen</figcaption>
+                  </figure></li>
+                  <li><figure>
+                    <img src="assets/figures/place-pens-04.webp" alt="The robot moves the second pen over its cup." width="1280" height="720" loading="lazy" decoding="async">
+                    <figcaption>Place second pen</figcaption>
+                  </figure></li>
+                </ol>
+              </section>
+              <section class="setup-card setup-sequence" aria-labelledby="sequence-clean-table">
+                <h4 id="sequence-clean-table">Clean the table</h4>
+                <ol class="setup-step-grid" role="list">
+                  <li><figure>
+                    <img src="assets/figures/clean-table-01.webp" alt="The robot moves the mug toward the rack." width="1280" height="720" loading="lazy" decoding="async">
+                    <figcaption>Hang mug</figcaption>
+                  </figure></li>
+                  <li><figure>
+                    <img src="assets/figures/clean-table-02.webp" alt="The robot moves a paper ball into the basket." width="1280" height="720" loading="lazy" decoding="async">
+                    <figcaption>Place first paper ball</figcaption>
+                  </figure></li>
+                  <li><figure>
+                    <img src="assets/figures/clean-table-03.webp" alt="The robot moves the blue block into the basket." width="1280" height="720" loading="lazy" decoding="async">
+                    <figcaption>Place block</figcaption>
+                  </figure></li>
+                  <li><figure>
+                    <img src="assets/figures/clean-table-04.webp" alt="The final paper ball is moved into the basket." width="1280" height="720" loading="lazy" decoding="async">
+                    <figcaption>Place second paper ball</figcaption>
+                  </figure></li>
+                </ol>
+              </section>
+            </section>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section class="section wrap citation" id="citation" aria-labelledby="citation-title">
+      <div>
+        <p class="eyebrow">CITATION</p>
+        <h2 id="citation-title">BibTeX</h2>
+      </div>
+      <div class="citation-box">
+        <div class="citation-heading"><span>BibTeX</span><button class="button button-small button-outline" type="button" id="copy-citation">Copy citation</button></div>
+        <pre tabindex="0"><code id="bibtex">@misc{wang2026weavevla,
+  title  = {{Weave-VLA}: {3D} Relational Grounding for
+            Vision-Language-Action Models},
+  author = {Wang, Zien and Pan, Yuhao and Fan, Yunfeng and
+            Cheng, Nan and Xia, Xin and Xu, Wenchao},
+  year   = {2026}
+}</code></pre>
+        <p class="sr-only" id="copy-status" role="status"></p>
+      </div>
+    </section>
+  </main>
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <a class="brand" href="#overview"><img class="mark" src="assets/mark.png?v=5" alt="" width="36" height="36"><span>Weave<span class="brand-accent">-VLA</span></span></a>
+      <p>3D Relational Grounding for Vision-Language-Action Models</p>
+    </div>
+  </footer>
+</body>
+</html>
